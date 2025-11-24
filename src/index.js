@@ -1,5 +1,5 @@
-import parser from './parser';
-import render from './render';
+import parser from './parser.js';
+import render from './render.js';
 
 const sample = `<note>
 <to>Tove</to>
