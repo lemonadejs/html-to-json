@@ -18,11 +18,10 @@ function normalizeHTML(html) {
  * Test roundtrip conversion: HTML -> JSON -> HTML
  * @param {string} original - Original HTML
  * @param {string} description - Test description
- * @param {Object} parserOptions - Options for parser
  * @param {Object} rendererOptions - Options for renderer
  */
-function testRoundtrip(original, description, parserOptions = {}, rendererOptions = {}) {
-    const json = HTMLParser(original, null, parserOptions);
+function testRoundtrip(original, description, rendererOptions = {}) {
+    const json = HTMLParser(original);
     const reconstructed = HTMLRenderer(json, rendererOptions);
 
     const normalizedOriginal = normalizeHTML(original);
@@ -63,7 +62,7 @@ describe('HTML/XML Roundtrip Tests', function() {
 
         it('should handle multiple root-level elements', function() {
             const html = '<div>First</div><span>Second</span>';
-            const json = HTMLParser(html, null);
+            const json = HTMLParser(html);
             const reconstructed = HTMLRenderer(json);
 
             // For multiple root elements, we need special handling
@@ -116,14 +115,14 @@ describe('HTML/XML Roundtrip Tests', function() {
             // Parser does not decode HTML entities (they are stored as-is)
             // This means roundtrip will double-escape. Use raw characters instead.
             const html = '<div title="Hello and Goodbye">Text</div>';
-            const json = HTMLParser(html, null);
+            const json = HTMLParser(html);
             const reconstructed = HTMLRenderer(json);
             assert.strictEqual(normalizeHTML(reconstructed), normalizeHTML(html));
         });
 
         it('should handle attributes with quotes using single quotes', function() {
             const html = `<div title='Say "Hello"'>Text</div>`;
-            const json = HTMLParser(html, null);
+            const json = HTMLParser(html);
             const reconstructed = HTMLRenderer(json);
             // Output always uses double quotes, so inner quotes get escaped
             assert.strictEqual(
@@ -152,7 +151,7 @@ describe('HTML/XML Roundtrip Tests', function() {
         it('should handle text with special characters', function() {
             // Use raw & character which will be properly escaped on output
             const html = '<p>Text with & ampersand</p>';
-            const json = HTMLParser(html, null);
+            const json = HTMLParser(html);
             const reconstructed = HTMLRenderer(json);
             assert.strictEqual(
                 normalizeHTML(reconstructed),
@@ -189,7 +188,7 @@ describe('HTML/XML Roundtrip Tests', function() {
 
         it('should handle comments inside elements', function() {
             const html = '<div>Before<!-- Comment -->After</div>';
-            const json = HTMLParser(html, null);
+            const json = HTMLParser(html);
             const reconstructed = HTMLRenderer(json);
 
             // Check that all parts are present
@@ -227,7 +226,7 @@ describe('HTML/XML Roundtrip Tests', function() {
 
         it('should handle XML namespaces', function() {
             const html = '<root xmlns:custom="http://example.com"><custom:element>Value</custom:element></root>';
-            const json = HTMLParser(html, null);
+            const json = HTMLParser(html);
             const reconstructed = HTMLRenderer(json);
 
             // Verify the structure is correct
@@ -321,11 +320,11 @@ describe('HTML/XML Roundtrip Tests', function() {
         });
     });
 
-    describe('Parser Options', function() {
+    describe('Parser Behavior', function() {
 
-        it('should exclude parent references when excludeParent is true', function() {
+        it('should not include parent references', function() {
             const html = '<div><span>Test</span></div>';
-            const json = HTMLParser(html, null, { excludeParent: true });
+            const json = HTMLParser(html);
 
             // Check that parent references are not included
             function checkNoParent(node) {
@@ -343,16 +342,14 @@ describe('HTML/XML Roundtrip Tests', function() {
             assert.strictEqual(normalizeHTML(reconstructed), normalizeHTML(html));
         });
 
-        it('should detect unclosed tags with warnings', function() {
+        it('should handle unclosed tags gracefully', function() {
             const html = '<div><span>Test';
-            const result = HTMLParser(html, null, { includeWarnings: true });
+            const json = HTMLParser(html);
 
-            assert.ok(result.warnings, 'Should return warnings');
-            assert.ok(result.warnings.length > 0, 'Should have at least one warning');
-            assert.ok(
-                result.warnings.some(w => w.message.includes('Unclosed')),
-                'Should warn about unclosed tags'
-            );
+            // Should still parse without crashing
+            assert.ok(json, 'Should return a result');
+            const reconstructed = HTMLRenderer(json);
+            assert.ok(reconstructed, 'Should be able to render');
         });
     });
 
@@ -387,7 +384,7 @@ describe('HTML/XML Roundtrip Tests', function() {
 describe('JSON Structure Tests', function() {
 
     it('should create correct JSON structure for simple element', function() {
-        const json = HTMLParser('<div class="test">Hello</div>', null);
+        const json = HTMLParser('<div class="test">Hello</div>');
 
         assert.strictEqual(json.type, 'div');
         assert.ok(Array.isArray(json.props));
@@ -398,7 +395,7 @@ describe('JSON Structure Tests', function() {
     });
 
     it('should handle text nodes correctly', function() {
-        const json = HTMLParser('<p>Test text</p>', null);
+        const json = HTMLParser('<p>Test text</p>');
 
         assert.strictEqual(json.children[0].type, '#text');
         assert.strictEqual(json.children[0].props[0].name, 'textContent');
@@ -406,19 +403,19 @@ describe('JSON Structure Tests', function() {
     });
 
     it('should handle comments correctly', function() {
-        const json = HTMLParser('<!-- Comment -->', null);
+        const json = HTMLParser('<!-- Comment -->');
 
         assert.strictEqual(json.type, '#comments');
         assert.strictEqual(json.props[0].name, 'text');
         assert.strictEqual(json.props[0].value, ' Comment ');
     });
 
-    it('should create proper parent-child relationships', function() {
-        const json = HTMLParser('<div><span>Test</span></div>', null);
+    it('should not include parent references', function() {
+        const json = HTMLParser('<div><span>Test</span></div>');
 
         assert.strictEqual(json.type, 'div');
         assert.ok(Array.isArray(json.children));
         assert.strictEqual(json.children[0].type, 'span');
-        assert.strictEqual(json.children[0].parent, json);
+        assert.strictEqual(json.children[0].parent, undefined, 'Should not have parent property');
     });
 });
