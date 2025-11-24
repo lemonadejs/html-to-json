@@ -248,12 +248,12 @@ const custom = render(tree, {
 
 ## 💡 Use Cases
 
-### 1. HTML Sanitization (Using `ignore` Option)
+### 1. HTML Sanitization
 
 ```javascript
 import { parser, render } from '@lemonadejs/html-to-json';
 
-// Simple and efficient sanitization using the ignore option
+// Remove potentially dangerous tags using the ignore option
 function sanitizeHTML(html) {
   const tree = parser(html, {
     ignore: ['script', 'style', 'iframe', 'object', 'embed']
@@ -266,36 +266,7 @@ const clean = sanitizeHTML(dirty);
 console.log(clean); // <div>HelloWorld</div>
 ```
 
-### 2. HTML Sanitization (Manual Tree Manipulation)
-
-```javascript
-import { parser, render } from '@lemonadejs/html-to-json';
-
-// Alternative: manually remove unwanted tags from the tree
-function sanitizeHTML(html) {
-  const tree = parser(html);
-
-  // Remove script tags
-  function removeScripts(node) {
-    if (node.type === 'script') return null;
-    if (node.children) {
-      node.children = node.children
-        .map(removeScripts)
-        .filter(Boolean);
-    }
-    return node;
-  }
-
-  const clean = removeScripts(tree);
-  return render(clean);
-}
-
-const dirty = '<div>Hello<script>alert("xss")</script>World</div>';
-const clean = sanitizeHTML(dirty);
-console.log(clean); // <div>HelloWorld</div>
-```
-
-### 3. HTML Transformation
+### 2. HTML Transformation
 
 ```javascript
 // Add class to all divs
@@ -324,7 +295,7 @@ console.log(render(tree));
 // <div class="highlight"><div class="highlight">Nested</div></div>
 ```
 
-### 4. XML Processing
+### 3. XML Processing
 
 ```javascript
 // Parse and extract data from XML
@@ -362,7 +333,7 @@ console.log(books);
 // [{ isbn: '978-0-123456-78-9', title: 'Sample Book', author: 'John Doe' }]
 ```
 
-### 5. Complex HTML with Inline CSS
+### 4. Complex HTML with Inline CSS
 
 ```javascript
 const complexHTML = `
