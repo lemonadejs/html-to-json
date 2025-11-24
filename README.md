@@ -10,6 +10,7 @@ Transform HTML/XML markup into clean JSON trees and render them back to markup w
 ## Features
 
 - **Zero Dependencies** - Pure JavaScript, no external libraries required
+- **TypeScript Support** - Fully typed with comprehensive type definitions
 - **Bidirectional** - Parse HTML/XML to JSON and render JSON back to HTML/XML
 - **High Fidelity** - Preserves structure, attributes, text nodes, and comments
 - **Lightweight** - Minimal footprint, fast parsing
@@ -31,6 +32,22 @@ You can import both functions from the main package:
 ```javascript
 // Recommended: Import both from main package
 import { parser, render } from '@lemonadejs/html-to-json';
+```
+
+## TypeScript Usage
+
+The library includes comprehensive type definitions:
+
+```typescript
+import { parser, render, type Node, type ParserOptions, type RenderOptions } from '@lemonadejs/html-to-json';
+
+// Fully typed parser with options
+const options: ParserOptions = { ignore: ['script', 'style'] };
+const tree: Node | undefined = parser('<div>Hello</div>', options);
+
+// Fully typed renderer with options
+const renderOpts: RenderOptions = { pretty: true, indent: '  ' };
+const html: string = render(tree, renderOpts);
 ```
 
 ## Quick Start
@@ -244,6 +261,35 @@ const custom = render(tree, {
     { "type": "span", ... }
   ]
 }
+```
+
+## 📦 TypeScript Types
+
+The library exports the following TypeScript types:
+
+### Core Types
+- **`Node`** - Union type for all possible node types (ElementNode | TextNode | CommentNode | TemplateNode)
+- **`ElementNode`** - HTML/XML element with type, props, and children
+- **`TextNode`** - Text content node with `type: '#text'`
+- **`CommentNode`** - Comment node with `type: '#comments'`
+- **`TemplateNode`** - Wrapper for multiple root elements with `type: 'template'`
+- **`NodeProp`** - Property object with name and value
+
+### Options Types
+- **`ParserOptions`** - Options for the parser function
+- **`RenderOptions`** - Options for the render function
+
+```typescript
+import type {
+  Node,
+  ElementNode,
+  TextNode,
+  CommentNode,
+  TemplateNode,
+  NodeProp,
+  ParserOptions,
+  RenderOptions
+} from '@lemonadejs/html-to-json';
 ```
 
 ## 💡 Use Cases
