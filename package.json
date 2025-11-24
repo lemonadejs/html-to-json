@@ -1,25 +1,70 @@
 {
-  "name": "html-to-json",
+  "name": "@lemonadejs/html-to-json",
   "version": "1.0.0",
-  "description": "Convert HTML or XML to general json format. No dependencies",
+  "description": "Lightweight, zero-dependency library for bidirectional conversion between HTML/XML and JSON",
   "type": "module",
+  "main": "src/index.js",
+  "types": "src/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.js",
+      "types": "./src/index.d.ts"
+    },
+    "./parser": {
+      "import": "./src/parser.js"
+    },
+    "./render": {
+      "import": "./src/render.js"
+    }
+  },
+  "files": [
+    "src/",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
-    "test": "mocha"
+    "test": "mocha",
+    "test:watch": "mocha --watch",
+    "prepublishOnly": "npm test"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/lemonadejs/html-to-json.git"
   },
-  "main": "src/index.js",
-  "types": "src/index.d.ts",
-  "keywords": [
-    "html to json converter",
-    "xml to json converter"
-  ],
-  "author": "",
-  "license": "MIT",
-  "dependencies": {
+  "bugs": {
+    "url": "https://github.com/lemonadejs/html-to-json/issues"
   },
+  "homepage": "https://github.com/lemonadejs/html-to-json#readme",
+  "keywords": [
+    "html",
+    "xml",
+    "json",
+    "parser",
+    "converter",
+    "html-parser",
+    "xml-parser",
+    "html-to-json",
+    "xml-to-json",
+    "json-to-html",
+    "json-to-xml",
+    "dom",
+    "markup",
+    "serializer",
+    "renderer",
+    "zero-dependency",
+    "lightweight",
+    "tree",
+    "ast"
+  ],
+  "author": {
+    "name": "Jspreadsheet Team",
+    "url": "https://jspreadsheet.com"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "dependencies": {},
   "devDependencies": {
     "mocha": "^11.1.0"
   }

@@ -7,29 +7,36 @@
 
 Transform HTML/XML markup into clean JSON trees and render them back to markup with full fidelity. Perfect for parsing, manipulating, and generating HTML/XML programmatically.
 
-## ✨ Features
+## Features
 
-- **🚀 Zero Dependencies** - Pure JavaScript, no external libraries required
-- **🔄 Bidirectional** - Parse HTML/XML to JSON and render JSON back to HTML/XML
-- **🎯 High Fidelity** - Preserves structure, attributes, text nodes, and comments
-- **📦 Lightweight** - Minimal footprint, fast parsing
-- **🔧 Flexible** - Works with HTML and XML, supports namespaces
-- **✅ Well Tested** - 48 passing tests with 100% coverage of core functionality
-- **🎨 Pretty Printing** - Optional formatted output with customizable indentation
-- **🌳 Clean Output** - No circular references, JSON-serializable trees
+- **Zero Dependencies** - Pure JavaScript, no external libraries required
+- **Bidirectional** - Parse HTML/XML to JSON and render JSON back to HTML/XML
+- **High Fidelity** - Preserves structure, attributes, text nodes, and comments
+- **Lightweight** - Minimal footprint, fast parsing
+- **Flexible** - Works with HTML and XML, supports namespaces
+- **Pretty Printing** - Optional formatted output with customizable indentation
 
-## 📦 Installation
+## Installation
 
 ```bash
 npm install @lemonadejs/html-to-json
 ```
 
-## 🚀 Quick Start
+## Import Options
+
+You can import both functions from the main package:
+
+```javascript
+// Recommended: Import both from main package
+import { parser, render } from '@lemonadejs/html-to-json';
+```
+
+## Quick Start
 
 ### Parse HTML/XML to JSON
 
 ```javascript
-import parser from '@lemonadejs/html-to-json/src/parser.js';
+import { parser } from '@lemonadejs/html-to-json';
 
 const html = '<div class="card"><h1>Title</h1><p>Content</p></div>';
 const tree = parser(html);
@@ -70,8 +77,7 @@ console.log(JSON.stringify(tree, null, 2));
 ### Render JSON back to HTML/XML
 
 ```javascript
-import parser from '@lemonadejs/html-to-json/src/parser.js';
-import render from '@lemonadejs/html-to-json/src/render.js';
+import { parser, render } from '@lemonadejs/html-to-json';
 
 const tree = parser('<div class="greeting">Hello World</div>');
 const html = render(tree);
@@ -83,7 +89,7 @@ console.log(html);
 ### Pretty Printing
 
 ```javascript
-import render from '@lemonadejs/html-to-json/src/render.js';
+import { render } from '@lemonadejs/html-to-json';
 
 const tree = {
   type: 'article',
@@ -146,12 +152,13 @@ Renders a JSON tree back into HTML or XML markup.
 - `options` (Object, optional) - Rendering options
 
 **Options:**
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `pretty` | boolean | `false` | Format output with newlines and indentation |
-| `indent` | string | `'  '` | Indentation string (used when `pretty` is `true`) |
-| `selfClosingTags` | string[] | See below* | Override default void elements list |
-| `xmlMode` | boolean | `false` | Self-close all empty elements using `<tag />` syntax |
+
+| Option            | Type     | Default    | Description                                          |
+|-------------------|----------|------------|------------------------------------------------------|
+| `pretty`          | boolean  | `false`    | Format output with newlines and indentation          |
+| `indent`          | string   | `'  '`     | Indentation string (used when `pretty` is `true`)    |
+| `selfClosingTags` | string[] | See below* | Override default void elements list                  |
+| `xmlMode`         | boolean  | `false`    | Self-close all empty elements using `<tag />` syntax |
 
 *Default self-closing tags: `area`, `base`, `br`, `col`, `embed`, `hr`, `img`, `input`, `link`, `meta`, `source`, `track`, `wbr`
 
@@ -227,8 +234,7 @@ const custom = render(tree, {
 ### 1. HTML Sanitization
 
 ```javascript
-import parser from '@lemonadejs/html-to-json/src/parser.js';
-import render from '@lemonadejs/html-to-json/src/render.js';
+import { parser, render } from '@lemonadejs/html-to-json';
 
 function sanitizeHTML(html) {
   const tree = parser(html);
