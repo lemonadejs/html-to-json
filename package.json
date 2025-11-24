@@ -5,6 +5,7 @@
   "main": "src/index.js",
   "type": "module",
   "scripts": {
+    "test": "mocha"
   },
   "keywords": [
     "html to json converter",
@@ -13,5 +14,8 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+  },
+  "devDependencies": {
+    "mocha": "^11.1.0"
   }
 }
