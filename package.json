@@ -2,11 +2,16 @@
   "name": "html-to-json",
   "version": "1.0.0",
   "description": "Convert HTML or XML to general json format. No dependencies",
-  "main": "src/index.js",
   "type": "module",
   "scripts": {
     "test": "mocha"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lemonadejs/html-to-json.git"
+  },
+  "main": "src/index.js",
+  "types": "src/index.d.ts",
   "keywords": [
     "html to json converter",
     "xml to json converter"
