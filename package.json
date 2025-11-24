@@ -1,0 +1,17 @@
+{
+  "name": "html-to-json",
+  "version": "1.0.0",
+  "description": "Convert HTML or XML to general json format. No dependencies",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+  },
+  "keywords": [
+    "html to json converter",
+    "xml to json converter"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+  }
+}
