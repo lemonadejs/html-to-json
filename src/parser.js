@@ -1,9 +1,18 @@
 /**
  * Parse HTML/XML string into a JSON tree structure
  * @param {string} html - HTML or XML string to parse
+ * @param {Object} options - Parser options
+ * @param {string[]} options.ignore - Array of tag names to ignore (e.g., ['script', 'style'])
  * @returns {Object} Parsed JSON tree
  */
-export default function parser(html) {
+export default function parser(html, options) {
+    // Handle null/undefined options
+    if (!options || typeof options !== 'object') {
+        options = {};
+    }
+
+    // Normalize ignore list to lowercase for case-insensitive matching
+    const ignoreTags = new Set((options.ignore || []).map(tag => tag.toLowerCase()));
     /**
      * Check if is a self-closing tag
      * @param {string} type - Tag name
@@ -55,11 +64,14 @@ export default function parser(html) {
      */
     const commitText = function() {
         if (typeof(this.text) !== 'undefined') {
-            // Preserve whitespace as-is
-            let text = this.text;
+            // Skip if we're inside an ignored tag
+            if (this.ignoreDepth === 0) {
+                // Preserve whitespace as-is
+                let text = this.text;
 
-            if (text) {
-                createTextNode.call(this, { name: 'textContent', value: text });
+                if (text) {
+                    createTextNode.call(this, { name: 'textContent', value: text });
+                }
             }
             delete this.text;
         }
@@ -70,20 +82,23 @@ export default function parser(html) {
      */
     const commitComments = function() {
         if (typeof(this.comments) !== 'undefined') {
-            let comments = this.comments;
-            if (comments) {
-                comments = comments
-                    .replace('<!--', '')
-                    .replace('-->', '')
+            // Skip if we're inside an ignored tag
+            if (this.ignoreDepth === 0) {
+                let comments = this.comments;
+                if (comments) {
+                    comments = comments
+                        .replace('<!--', '')
+                        .replace('-->', '')
 
-                if (!this.current.children) {
-                    this.current.children = [];
+                    if (!this.current.children) {
+                        this.current.children = [];
+                    }
+
+                    this.current.children.push({
+                        type: '#comments',
+                        props: [{ name: 'text', value: comments }],
+                    });
                 }
-
-                this.current.children.push({
-                    type: '#comments',
-                    props: [{ name: 'text', value: comments }],
-                });
             }
             delete this.comments;
         }
@@ -165,6 +180,32 @@ export default function parser(html) {
         commitAttribute.call(this);
         // Close the tag
         if (char === '>') {
+            // Check if this tag should be ignored
+            const shouldIgnore = ignoreTags.has(this.tag.type.toLowerCase());
+
+            // Handle closing tags for ignored elements
+            if (this.tag.closingTag && shouldIgnore && this.ignoreDepth > 0) {
+                this.ignoreDepth--;
+                this.tag = null;
+                this.action = 'text';
+                return;
+            }
+
+            // If we're inside an ignored tag, skip processing
+            if (this.ignoreDepth > 0) {
+                this.tag = null;
+                this.action = 'text';
+                return;
+            }
+
+            // Opening tag for ignored element - increment depth and skip
+            if (shouldIgnore && !this.tag.closingTag) {
+                this.ignoreDepth++;
+                this.tag = null;
+                this.action = 'text';
+                return;
+            }
+
             // Get the new parent
             if (isSelfClosing(this.tag.type)) {
                 // Push new tag to the current
@@ -333,6 +374,7 @@ export default function parser(html) {
         current: result,
         stack: [],  // Stack to track open tags
         action: 'text',
+        ignoreDepth: 0,  // Track depth of ignored tags
     };
 
     // Input validation

@@ -3,7 +3,7 @@
 > A lightweight, zero-dependency library for bidirectional conversion between HTML/XML and JSON
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Tests](https://img.shields.io/badge/tests-48%20passing-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-58%20passing-brightgreen.svg)]()
 
 Transform HTML/XML markup into clean JSON trees and render them back to markup with full fidelity. Perfect for parsing, manipulating, and generating HTML/XML programmatically.
 
@@ -14,7 +14,9 @@ Transform HTML/XML markup into clean JSON trees and render them back to markup w
 - **High Fidelity** - Preserves structure, attributes, text nodes, and comments
 - **Lightweight** - Minimal footprint, fast parsing
 - **Flexible** - Works with HTML and XML, supports namespaces
+- **Sanitization Ready** - Built-in option to ignore unwanted tags (script, style, etc.)
 - **Pretty Printing** - Optional formatted output with customizable indentation
+- **Well Tested** - 58 comprehensive tests covering all features
 
 ## Installation
 
@@ -129,18 +131,33 @@ console.log(html);
 
 ## 📖 API Reference
 
-### `parser(html)`
+### `parser(html, options)`
 
 Parses HTML or XML string into a JSON tree structure.
 
 **Parameters:**
 - `html` (string) - The HTML or XML string to parse
+- `options` (Object, optional) - Parser options
+
+**Options:**
+
+| Option   | Type     | Default | Description                                    |
+|----------|----------|---------|------------------------------------------------|
+| `ignore` | string[] | `[]`    | Array of tag names to ignore during parsing    |
 
 **Returns:** `Object` - JSON tree representation
 
-**Example:**
+**Examples:**
+
 ```javascript
+// Basic parsing
 const tree = parser('<div id="app">Hello</div>');
+
+// Ignore script and style tags
+const clean = parser(html, { ignore: ['script', 'style'] });
+
+// Case-insensitive tag matching
+const tree = parser('<div><SCRIPT>bad</SCRIPT></div>', { ignore: ['script'] });
 ```
 
 ### `render(tree, options)`
@@ -231,11 +248,30 @@ const custom = render(tree, {
 
 ## 💡 Use Cases
 
-### 1. HTML Sanitization
+### 1. HTML Sanitization (Using `ignore` Option)
 
 ```javascript
 import { parser, render } from '@lemonadejs/html-to-json';
 
+// Simple and efficient sanitization using the ignore option
+function sanitizeHTML(html) {
+  const tree = parser(html, {
+    ignore: ['script', 'style', 'iframe', 'object', 'embed']
+  });
+  return render(tree);
+}
+
+const dirty = '<div>Hello<script>alert("xss")</script><style>bad{}</style>World</div>';
+const clean = sanitizeHTML(dirty);
+console.log(clean); // <div>HelloWorld</div>
+```
+
+### 2. HTML Sanitization (Manual Tree Manipulation)
+
+```javascript
+import { parser, render } from '@lemonadejs/html-to-json';
+
+// Alternative: manually remove unwanted tags from the tree
 function sanitizeHTML(html) {
   const tree = parser(html);
 
@@ -259,7 +295,7 @@ const clean = sanitizeHTML(dirty);
 console.log(clean); // <div>HelloWorld</div>
 ```
 
-### 2. HTML Transformation
+### 3. HTML Transformation
 
 ```javascript
 // Add class to all divs
@@ -288,7 +324,7 @@ console.log(render(tree));
 // <div class="highlight"><div class="highlight">Nested</div></div>
 ```
 
-### 3. XML Processing
+### 4. XML Processing
 
 ```javascript
 // Parse and extract data from XML
@@ -326,7 +362,7 @@ console.log(books);
 // [{ isbn: '978-0-123456-78-9', title: 'Sample Book', author: 'John Doe' }]
 ```
 
-### 4. Complex HTML with Inline CSS
+### 5. Complex HTML with Inline CSS
 
 ```javascript
 const complexHTML = `
@@ -397,10 +433,11 @@ npm test
 - ✅ Complex real-world examples (forms, navigation, tables)
 - ✅ Edge cases (empty input, whitespace, consecutive tags)
 - ✅ Parser behavior (no parent references, unclosed tags)
+- ✅ Parser options (ignore tags - script, style, nested, case-insensitive)
 - ✅ Renderer options (pretty printing, XML mode)
 - ✅ Complex HTML with extensive inline CSS (11,000+ characters)
 
-**48 tests passing** • 1 skipped
+**58 tests passing** • 1 skipped
 
 ## ⚡ Performance
 
