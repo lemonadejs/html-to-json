@@ -1,39 +1,23 @@
-export default function parser(html, values, options = {}) {
-    /**
-     * process the scape chars
-     * @param char
-     * @returns {*|string}
-     */
-    function escape(char) {
-        const escapeMap = {
-            'n': String.fromCharCode(0x0A),
-            'r': String.fromCharCode(0x0D),
-            't': String.fromCharCode(0x09),
-            'b': String.fromCharCode(0x08),
-            'f': String.fromCharCode(0x0C),
-            'v': String.fromCharCode(0x0B),
-            '0': String.fromCharCode(0x00)
-        };
-
-        return escapeMap[char] || char;
-    }
-
+/**
+ * Parse HTML/XML string into a JSON tree structure
+ * @param {string} html - HTML or XML string to parse
+ * @returns {Object} Parsed JSON tree
+ */
+export default function parser(html) {
     /**
      * Check if is a self-closing tag
-     * @param {string|function} type - Tag name or component function
+     * @param {string} type - Tag name
      * @returns {boolean}
      */
     function isSelfClosing(type) {
-        if (! type) {
+        if (!type) {
             return false;
-        } else {
-            // List of self-closing or void HTML elements
-            const selfClosingTags = [
-                'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr'
-            ];
-            // Convert tagName to lowercase to ensure case-insensitive comparison
-            return typeof(type) === 'function' || selfClosingTags.includes(type.toLowerCase());
         }
+        // List of self-closing or void HTML elements
+        const selfClosingTags = [
+            'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr'
+        ];
+        return selfClosingTags.includes(type.toLowerCase());
     }
 
     /**
@@ -41,60 +25,29 @@ export default function parser(html, values, options = {}) {
      * @param {Object} tag - Text node properties
      */
     const createTextNode = function(tag) {
-        if (! this.current.children) {
+        if (!this.current.children) {
             this.current.children = [];
         }
 
-        const textNode = {
+        this.current.children.push({
             type: '#text',
             props: [tag],
-        };
-
-        if (!options.excludeParent) {
-            textNode.parent = this.current;
-        }
-
-        this.current.children.push(textNode);
+        });
     }
 
     /**
-     * Find the parent node by tag name
-     * @param {Object} node - Current node
+     * Find the parent node by tag name (traverses up using control.stack)
      * @param {string} type - Tag name to find
      * @returns {Object|undefined}
      */
-    const findParentByTagName = function(node, type) {
-        if (node && type) {
-            if (node.type === type) {
-                return node;
-            } else if (node.parent) {
-                return findParentByTagName(node.parent, type);
+    const findParentByTagName = function(type) {
+        // Search backwards through the stack to find matching opening tag
+        for (let i = this.stack.length - 1; i >= 0; i--) {
+            if (this.stack[i].type === type) {
+                return this.stack[i];
             }
         }
-
         return undefined;
-    }
-
-    /**
-     * Get expression value and update tag metadata
-     * @param {Object} tag - Tag to update
-     * @returns {*} Expression value
-     */
-    const getExpression = function(tag) {
-        // Get value
-        const v = values && values[this.index] !== undefined ? values[this.index] : '';
-        if (tag) {
-            // Keep the reference
-            tag.expression = this.reference;
-            // Keep the index
-            tag.index = this.index;
-        }
-        // Move the value index
-        this.index++;
-        // Delete reference
-        delete this.reference;
-        // Return value
-        return v;
     }
 
     /**
@@ -102,14 +55,8 @@ export default function parser(html, values, options = {}) {
      */
     const commitText = function() {
         if (typeof(this.text) !== 'undefined') {
-            // Normalize whitespace: only remove newlines with following spaces
-            // This preserves single spaces but cleans up formatting whitespace
+            // Preserve whitespace as-is
             let text = this.text;
-
-            if (!options.preserveWhitespace) {
-                // Remove newlines followed by spaces (formatting), but keep single spaces
-                text = text.replace(/\r?\n\s*/g, '');
-            }
 
             if (text) {
                 createTextNode.call(this, { name: 'textContent', value: text });
@@ -118,6 +65,9 @@ export default function parser(html, values, options = {}) {
         }
     }
 
+    /**
+     * Handle comment node creation
+     */
     const commitComments = function() {
         if (typeof(this.comments) !== 'undefined') {
             let comments = this.comments;
@@ -126,20 +76,14 @@ export default function parser(html, values, options = {}) {
                     .replace('<!--', '')
                     .replace('-->', '')
 
-                if (! this.current.children) {
+                if (!this.current.children) {
                     this.current.children = [];
                 }
 
-                const commentNode = {
+                this.current.children.push({
                     type: '#comments',
                     props: [{ name: 'text', value: comments }],
-                };
-
-                if (!options.excludeParent) {
-                    commentNode.parent = this.current;
-                }
-
-                this.current.children.push(commentNode);
+                });
             }
             delete this.comments;
         }
@@ -151,7 +95,7 @@ export default function parser(html, values, options = {}) {
     const commitAttribute = function() {
         if (this.tag.attributeName) {
             // Commit any current attribute
-            if (! this.tag.props) {
+            if (!this.tag.props) {
                 this.tag.props = [];
             }
 
@@ -162,23 +106,14 @@ export default function parser(html, values, options = {}) {
                 v = k;
             }
 
-            let tag = {
+            this.tag.props.push({
                 name: k,
                 value: v,
-            };
-
-            if (typeof(this.tag.expression) !== 'undefined') {
-                tag.index = this.tag.index;
-                tag.expression = this.tag.expression;
-            }
-
-            this.tag.props.push(tag);
+            });
 
             // Clean up temporary properties
             delete this.tag.attributeName;
             delete this.tag.attributeValue;
-            delete this.tag.index;
-            delete this.tag.expression;
 
             if (this.tag.attributeIsReadyToClose) {
                 delete this.tag.attributeIsReadyToClose;
@@ -199,72 +134,6 @@ export default function parser(html, values, options = {}) {
     }
 
     /**
-     * Extract content between expression markers, handling quoted content, nested braces, and escapes
-     * @param {string} html - Full HTML string
-     * @param {number} startIndex - Starting index (position after ${})
-     * @returns {Object} Expression content and ending position
-     */
-    function extractExpressionContent(html, startIndex) {
-        let text = '';
-        let i = startIndex;
-        let insideQuotes = null;
-        let braceDepth = 0;
-        let escaped = false;
-
-        while (i < html.length) {
-            const char = html[i];
-
-            // Handle escape sequences
-            if (escaped) {
-                text += char;
-                escaped = false;
-                i++;
-                continue;
-            }
-
-            if (char === '\\') {
-                text += char;
-                escaped = true;
-                i++;
-                continue;
-            }
-
-            // Handle quotes
-            if ((char === '"' || char === "'" || char === '`')) {
-                if (!insideQuotes) {
-                    insideQuotes = char;
-                } else if (char === insideQuotes) {
-                    insideQuotes = null;
-                }
-            }
-
-            // Handle nested braces outside quotes
-            if (!insideQuotes) {
-                if (char === '{') {
-                    braceDepth++;
-                } else if (char === '}') {
-                    if (braceDepth === 0) {
-                        // Found the closing brace for our expression
-                        return {
-                            content: text,
-                            position: i
-                        };
-                    }
-                    braceDepth--;
-                }
-            }
-
-            text += char;
-            i++;
-        }
-
-        return {
-            content: text,
-            position: i
-        };
-    }
-
-    /**
      * Process a new tag
      * @param char
      */
@@ -278,18 +147,10 @@ export default function parser(html, values, options = {}) {
             this.tag = {
                 type: ''
             };
-
-            if (!options.excludeParent) {
-                this.tag.parent = this.current;
-            }
         } else if (char.match(/[a-zA-Z0-9-:]/)) {
             // Tag name (including colons for XML namespaces)
             this.tag.type += char;
         } else {
-            if (char === '$' && this.reference) {
-                // Custom tags
-                this.tag.type = getExpression.call(this);
-            }
             // Finished with tag name, move to attribute handling
             this.action = 'attributeName';
         }
@@ -306,51 +167,59 @@ export default function parser(html, values, options = {}) {
         if (char === '>') {
             // Get the new parent
             if (isSelfClosing(this.tag.type)) {
-                // Push new tag to the parent
-                const parentNode = this.tag.parent || this.current;
-                if (! parentNode.children) {
-                    parentNode.children = [];
+                // Push new tag to the current
+                if (!this.current.children) {
+                    this.current.children = [];
                 }
-                parentNode.children.push(this.tag);
+                this.current.children.push(this.tag);
             } else if (this.tag.closingTag) {
                 // Need to find the parent on the chain
-                const parentNode = findParentByTagName(this.tag.parent || this.current, this.tag.type);
+                const parentNode = findParentByTagName.call(this, this.tag.type);
                 if (parentNode) {
-                    this.current = parentNode.parent || this.current;
-                } else {
-                    addWarning(`Closing tag "${this.tag.type}" has no matching opening tag`, this.position);
+                    // Pop stack until we find the matching tag
+                    while (this.stack.length > 0 && this.stack[this.stack.length - 1] !== parentNode) {
+                        this.stack.pop();
+                    }
+                    // Pop the matched tag itself
+                    if (this.stack.length > 0) {
+                        this.stack.pop();
+                    }
+                    // Current is now the top of stack (or root if empty)
+                    this.current = this.stack.length > 0 ? this.stack[this.stack.length - 1] : this.root;
                 }
             } else {
                 // Store the parent before updating current
-                const parentNode = this.tag.parent || this.current;
-
                 if (this.tag.closing) {
-                    // Current is the parent
-                    this.current = parentNode;
-                } else {
-                    // Push new tag to the parent first
-                    if (parentNode !== this.tag) {
-                        if (! parentNode.children) {
-                            parentNode.children = [];
-                        }
-                        parentNode.children.push(this.tag);
+                    // Self-closing tag like <br />
+                    if (!this.current.children) {
+                        this.current.children = [];
                     }
-                    // Then update current
+                    this.current.children.push(this.tag);
+                } else {
+                    // Opening tag - push to current's children
+                    if (!this.current.children) {
+                        this.current.children = [];
+                    }
+                    this.current.children.push(this.tag);
+
+                    // Push to stack and update current
+                    this.stack.push(this.tag);
                     this.current = this.tag;
                 }
             }
 
-            // Remote temporary properties
+            // Clean up temporary properties
             delete this.tag.insideQuote;
             delete this.tag.closingTag;
             delete this.tag.closing;
+            delete this.tag.locked;
             // Finalize tag
             this.tag = null;
             // New action
             this.action = 'text';
-        } else if (! this.tag.locked) {
+        } else if (!this.tag.locked) {
             if (char === '/') {
-                if (! this.tag.type) {
+                if (!this.tag.type) {
                     // This is a closing tag
                     this.tag.closingTag = true;
                 }
@@ -378,7 +247,7 @@ export default function parser(html, values, options = {}) {
 
         // Build attribute name
         if (char.match(/[a-zA-Z0-9-:]/)) {
-            if (! this.tag.attributeName) {
+            if (!this.tag.attributeName) {
                 this.tag.attributeName = '';
             }
             this.tag.attributeName += char;
@@ -396,7 +265,7 @@ export default function parser(html, values, options = {}) {
     };
 
     actions.attributeValue = function(char) {
-        if (! this.tag.attributeValue) {
+        if (!this.tag.attributeValue) {
             this.tag.attributeValue = '';
         }
 
@@ -411,10 +280,6 @@ export default function parser(html, values, options = {}) {
                 this.tag.insideQuote = char;
             }
         } else {
-            if (char === '$' && this.reference) {
-                // Custom tags
-                char = getExpression.call(this, this.tag);
-            }
             // Inside quotes, keep appending to the attribute value
             if (this.tag.insideQuote) {
                 if (this.tag.attributeValue) {
@@ -443,35 +308,15 @@ export default function parser(html, values, options = {}) {
     }
 
     actions.text = function(char) {
-        if (char === '$' && this.reference) {
-            // Just to check if there are any text to commit
-            commitText.call(this);
-            // Custom tags
-            let tag = { name: 'textContent' }
-            tag.value = getExpression.call(this, tag);
-            // Add node tag
-            createTextNode.call(this, tag);
-        } else {
-            if (referenceControl === 1) {
-                // Just to check if there are any text to commit
-                commitText.call(this);
-            }
-
-            // Normal text processing
-            if (! this.text) {
-                this.text = '';
-            }
-            this.text += char; // Keep appending to text content
-
-            if (referenceControl === 2) {
-                // Just to check if there are any text to commit
-                commitText.call(this);
-            }
+        // Normal text processing
+        if (!this.text) {
+            this.text = '';
         }
+        this.text += char; // Keep appending to text content
     }
 
     actions.comments = function(char) {
-        if (! this.comments) {
+        if (!this.comments) {
             this.comments = '';
         }
         this.comments += char;
@@ -482,42 +327,12 @@ export default function parser(html, values, options = {}) {
         }
     }
 
-    // Control the LemonadeJS native references
-    let referenceControl = null;
-
     const result = { type: 'template' };
     const control = {
+        root: result,
         current: result,
+        stack: [],  // Stack to track open tags
         action: 'text',
-        index: 0,
-        errors: [],
-        warnings: [],
-    };
-
-    /**
-     * Add error to the error list
-     * @param {string} message - Error message
-     * @param {number} position - Position in HTML where error occurred
-     */
-    const addError = function(message, position) {
-        control.errors.push({
-            type: 'error',
-            message,
-            position
-        });
-    };
-
-    /**
-     * Add warning to the warning list
-     * @param {string} message - Warning message
-     * @param {number} position - Position in HTML where warning occurred
-     */
-    const addWarning = function(message, position) {
-        control.warnings.push({
-            type: 'warning',
-            message,
-            position
-        });
     };
 
     // Input validation
@@ -527,8 +342,6 @@ export default function parser(html, values, options = {}) {
 
     // Main loop to process the HTML string
     for (let i = 0; i < html.length; i++) {
-        // Store current position for error reporting
-        control.position = i;
         // Current char
         let char = html[i];
 
@@ -537,20 +350,6 @@ export default function parser(html, values, options = {}) {
         }
 
         if (control.action !== 'comments') {
-            let escaped = false;
-
-            if (values !== null) {
-                // Handle scape
-                if (char === '\\') {
-                    // This is a escaped char
-                    escaped = true;
-                    // Parse escape char
-                    char = escape(html[i+1]);
-                    // Move to the next char
-                    i++;
-                }
-            }
-
             // Global control logic
             if (control.tag) {
                 if (char === '>' || char === '/') {
@@ -564,38 +363,14 @@ export default function parser(html, values, options = {}) {
                     control.action = 'processTag';
                 }
             }
-
-            // Register references for a dynamic template
-            if (!escaped && char === '$' && html[i + 1] === '{') {
-                const result = extractExpressionContent(html, i + 2);
-                control.reference = result.content;
-                i = result.position;
-            }
-
-            // Control node references
-            if (char === '{' && html[i + 1] === '{') {
-                referenceControl = 1;
-            } else if (char === '}' && html[i - 1] === '}') {
-                referenceControl = 2;
-            }
         }
 
         // Execute action
         actions(control, char);
-
-        // Reference control
-        referenceControl = null;
     }
 
     // Handle any remaining text
     commitText.call(control);
-
-    // Check for unclosed tags
-    let checkNode = control.current;
-    while (checkNode && checkNode.type !== 'template') {
-        addWarning(`Unclosed tag "${checkNode.type}"`, html.length);
-        checkNode = checkNode.parent;
-    }
 
     // Determine the final result
     let finalResult;
@@ -608,15 +383,6 @@ export default function parser(html, values, options = {}) {
         else if (result.children.length > 1) {
             finalResult = result;
         }
-    }
-
-    // Return with or without errors/warnings
-    if (options.includeErrors || options.includeWarnings) {
-        return {
-            result: finalResult,
-            errors: options.includeErrors ? control.errors : undefined,
-            warnings: options.includeWarnings ? control.warnings : undefined
-        };
     }
 
     return finalResult;
